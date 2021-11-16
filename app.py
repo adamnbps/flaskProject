@@ -1,6 +1,9 @@
+import smtplib
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+
+
 
 
 app = Flask(__name__)
@@ -8,14 +11,17 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
 db = SQLAlchemy(app)
 app.secret_key = 'the random string'
 
+@app.before_first_request
+def create_tables():
+    db.create_all()
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     subtitle = db.Column(db.String(255), nullable=False)
     body = db.Column(db.Text, nullable=False)
     pub_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    category_id = db.Column(db.Integer, db.ForeignKey('category.id'),
-        nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
     category = db.relationship('Category', backref=db.backref('posts', lazy=True))
 
     def __repr__(self):
@@ -24,7 +30,7 @@ class Post(db.Model):
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False, unique=True)
+    name = db.Column(db.String(50), nullable=False, unique=True, autoincrement=True)
 
     def __repr__(self):
         return '<Category %r>' % self.name
@@ -91,9 +97,26 @@ def add_post():
         flash("Post added to database.", "info")
         return redirect(url_for("get_all_posts"))
 
-@app.route('/contact')
+
+@app.route('/contact', methods=['GET', 'POST'])
 def contact():
-    return render_template("/contact.html")
+    if request.method == "GET":
+        return render_template("/contact.html")
+    else:
+        email = request.form["email"]
+        message = request.form["message"]
+        with smtplib.SMTP("mail.comscirepublic.com", port=465) as smtp:
+            my_email = "test@comscirepublic.com"
+            password = "6)Tdz3*ba+&q"
+            smtp.login(user=my_email, password=password)
+            msg_header = "From: test@comscirepublic.com \nTo: adam.horvitz@mynbps.org\nSubject: Yo man"
+            smtp.sendmail(
+                from_addr=my_email,
+                to_addrs="adam.horvitz@mynbps.org",
+                msg=msg_header + "}\n\n" + message)
+        flash("Email successfully sent.", "info")
+        return redirect(url_for("get_all_posts"))
+
 
 @app.route('/edit-category', methods=['GET', 'POST'])
 def edit_category():
@@ -111,5 +134,15 @@ def edit_category():
         return render_template("/edit-category.html", categories=categories)
 
 
+@app.route('/edit-category/delete/<int:category_id>', methods=['GET', 'POST'])
+def delete_category(category_id):
+    category = Category.query.get(category_id)
+    db.session.delete(category)
+    db.session.commit()
+    flash("Category deleted from database.","info")
+    return redirect(url_for("edit_category"))
+
+
+
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=5000, debug=True)
