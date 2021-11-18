@@ -77,6 +77,7 @@ def delete_post(post_id):
     flash("Post deleted from database.","info")
     return redirect(url_for("get_all_posts"))
 
+
 @app.route('/add-post', methods=['GET', 'POST'])
 def add_post():
     if request.method == "GET":
