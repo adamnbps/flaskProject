@@ -143,6 +143,11 @@ def delete_category(category_id):
     return redirect(url_for("edit_category"))
 
 
+@app.route('/about-me', methods=['GET', 'POST'])
+def about_me():
+        return render_template("/about-me.html")
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
